@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"strings"
 
 	"tailscale.com/client/tailscale"
 	"tailscale.com/speedtest"
@@ -39,9 +40,16 @@ var speedtestServerCmd = &ffcli.Command{
 
 var speedtestClientCmd = &ffcli.Command{
 	Name:       "client",
-	ShortUsage: "speedtest client HOST:PORT <download|upload>",
+	ShortUsage: "speedtest client -t <download|upload> -a <host:port>",
 	ShortHelp:  "Start a speed test client and connect to a speed test server",
 	Exec:       runClient,
+	FlagSet: (func() *flag.FlagSet {
+		fs := flag.NewFlagSet("client", flag.ExitOnError)
+		fs.StringVar(&clientArgs.testType, "type", "", "the type of speedtest to run, either download or upload")
+		fs.StringVar(&clientArgs.host, "host", "", "the ip address for the speedtest server being used")
+		fs.StringVar(&clientArgs.port, "port", "", "the port of the speedtest server being used")
+		return fs
+	})(),
 }
 
 var serverArgs struct {
@@ -71,6 +79,16 @@ func runServer(ctx context.Context, args []string) error {
 	return err
 }
 
+var clientArgs struct {
+	testType string
+	host     string
+	port     string
+}
+
 func runClient(ctx context.Context, args []string) error {
-	return errors.New("not implemented")
+	if strings.EqualFold(clientArgs.host, "") || strings.EqualFold(clientArgs.port, "") {
+		return errors.New("both host and port must be given")
+	}
+
+	return speedtest.StartClient(clientArgs.testType, clientArgs.host, clientArgs.port)
 }

@@ -3,13 +3,14 @@ package speedtest
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"time"
 )
 
-func startClient(testType, host, port string) error {
+func StartClient(testType, host, port string) error {
 	serverAddr, err := net.ResolveTCPAddr("tcp", host+":"+port)
 	if err != nil {
 		return err
@@ -25,6 +26,8 @@ func startClient(testType, host, port string) error {
 		conn.SetReadBuffer(LenBufJSON + LenBufData)
 		downloadClient(conn)
 	case "upload":
+	default:
+		return errors.New("test type invalid. Must be either download or uplaod")
 	}
 	return nil
 }
@@ -108,8 +111,6 @@ func downloadClient(conn *net.TCPConn) {
 				continue
 			}
 			records = append(records, Record{TimeSlot: time.Since(downloadBegin), Size: LenBufJSON + LenBufData})
-		default:
-			fmt.Println("other")
 		}
 	}
 
@@ -118,7 +119,7 @@ func downloadClient(conn *net.TCPConn) {
 func analyzeResults(records []Record) {
 
 	// calculate throughput
-	var sum int32
+	var sum int64
 	for _, record := range records {
 		sum = sum + record.Size
 	}
@@ -126,5 +127,4 @@ func analyzeResults(records []Record) {
 	mbRecieved := float64(sum) / float64(1000000)
 	fmt.Printf("\trecieved %.4f mb  in %.2f seconds\n", mbRecieved, totalTime)
 	fmt.Printf("\tdownload speed: %.4f mb/s\n", mbRecieved/totalTime)
-
 }
